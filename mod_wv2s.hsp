@@ -1,0 +1,33 @@
+#ifndef MOD_WV2S_HSP
+#define global MOD_WV2S_HSP
+
+#uselib "wv2s.dll"
+#func global CreateCoreWebView2EnvironmentWithOptions     "CreateCoreWebView2EnvironmentWithOptions"     wptr,wptr,var,var
+#func global CreateCoreWebView2Environment                "CreateCoreWebView2Environment"                int
+#func global GetAvailableCoreWebView2BrowserVersionString "GetAvailableCoreWebView2BrowserVersionString" wptr,var
+#func global CompareBrowserVersions                       "CompareBrowserVersions"                       wptr,wptr,var
+
+#func global WV2HdlNew     "WV2HdlNew"     int,int,int // type(0:II 1:HI 2:HW 3:HB 4:H), hWnd, msg
+#func global WV2HdlDel     "WV2HdlDel"     int
+#func global WV2HdlWait    "WV2HdlWait"    int,int
+#func global WV2HdlGet     "WV2HdlGet"     int,int
+#func global WV2Env        "WV2Env"        int,int
+#func global WV2Ctrl       "WV2Ctrl"       int,int
+#func global WV2GetVisible "WV2GetVisible" int
+#func global WV2SetVisible "WV2SetVisible" int,int
+#func global WV2GetSize    "WV2GetSize"    int,var
+#func global WV2SetSize    "WV2SetSize"    int,int,int,int,int
+#func global WV2Navigate   "WV2Navigate"   int,wstr
+#func global WV2Write      "WV2Write"      int,wstr
+
+#func global ComCall    "ComCall"    int,int,var,int
+#func global ComNew     "ComNew"     wstr,wstr
+#func global ComDel     "ComDel"     int
+#func global ComQuery   "ComQuery"   int,wstr
+#func global ComAdd     "ComAdd"     int
+#func global ComRelease "ComRelease" int
+#func global ComAlloc   "ComAlloc"   int
+#func global ComFree    "ComFree"    int
+#func global ConvIID    "ConvIID"    wstr,var
+
+#endif // MOD_WV2S_HSP

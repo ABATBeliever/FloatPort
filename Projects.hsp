@@ -1,0 +1,375 @@
+/* ---------------------------------------------------------
+	FloatPort ver. 0.4.1
+	Floating Browser for Windows
+
+	2025 ABATBeliever. All rights reserved.
+
+	This Software is in Under MIT LICENSE.
+   --------------------------------------------------------- */
+#define ApplicationName    "FloatPort"
+#define ApplicationVersion "0.4.1"
+#define UpdateWebServer    "https://abatbeliever.net/app/FloatPort/upd.txt"
+#define RequireHSPVersion  14092 //HSP 3.7 Stable
+
+/* ---------------------------------------------------------
+	Build Config
+   --------------------------------------------------------- */
+#include "hsp3utf.as"
+#packopt version "src/Build.ini"
+//#packopt icon    "src/image.ico"
+#packopt hide 1
+
+/* ---------------------------------------------------------
+	Include / Windows API Load
+   --------------------------------------------------------- */
+#epackdir "include/*"
+
+#include "mod_wv2s.hsp"
+#include "lib/mod_mdispinfo.as"
+
+#include "user32.as"
+#func    SetProcessDPIAware "SetProcessDPIAware"
+//#func    SetProcessDpiAwarenessContext "SetProcessDpiAwarenessContext" int
+
+/* ---------------------------------------------------------
+	Define Constance
+   --------------------------------------------------------- */
+#define global WV2Ctrl_get_CoreWebView2      25
+#define global WV2_Navigate                   5
+#define global WV2_get_CanGoBack             38
+#define global WV2_get_CanGoForward          39
+#define global WV2_get_GoBack                40
+#define global WV2_get_GoForward             41
+#define global WV2_add_DocumentTitleChanged  46
+#define global WV2_del_DocumentTitleChanged  47
+#define global WV2_get_DocumentTitle         48
+
+#define ctype LOWORD(%1) (%1 & $FFFF)
+#define ctype HIWORD(%1) (%1 >> 16 & $FFFF)
+
+/* ---------------------------------------------------------
+	Load Settings
+   --------------------------------------------------------- */
+IsForceFlow      = 0  //0 無効 / 1 有効
+LayerLevel       = 20 //透明度(100-x)
+FirstPage        = "www.google.com" //https://は補完
+SearchEngineList = 0  //Google/Bing/DuckDuckGo/Brave/Ecosia/Wikipedia.jp/百度/常にURLとみなす
+SysMode          = 0
+ExecuteKey(0)    = 16
+ExecuteKey(1)    = 17
+
+IsActivate       = 1 //0 非表示 / 1 表示
+
+/* ---------------------------------------------------------
+	Boot Routine
+   --------------------------------------------------------- */
+if RequireHSPVersion>hspver { dialog "D-Version is outdated.",1,"Error 0x90" }
+
+// 高DPI対応(Windows 10 1703 ～)
+if varptr(SetProcessDPIAware) { SetProcessDPIAware }
+
+// 画像読み込み
+buffer 1,222,32,0
+pos   0,0         : picload "include/Left.png"			,1
+pos  32,0         : picload "include/Right.png"			,1
+pos  64,0         : picload "include/Pin_Active.png"	,1
+pos  96,0         : picload "include/Pin_Negative.png"	,1
+pos 128,0         : picload "include/Config.png"		,1
+color 192,192,192 : boxf 160,2,190,30
+if IsForceFlow=0{
+	pos 192,0:gcopy 1,96,0,32,32
+}else{
+	pos 192,0:gcopy 1,64,0,32,32
+}
+gsel 0
+
+//ウィンドウ初期化
+bgscr 0,640,480,8 : title ""+ApplicationName+" "+ApplicationVersion
+MainWnd=hwnd
+GetWindowLong hwnd, -20
+SetWindowLong hwnd, -20, stat | $80000
+SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+
+gsel 0,1
+width ,,0,0
+
+onclick gosub *OnClicked
+onkey   gosub *KeyPressed
+
+//WebViewの準備
+exist "wv2s.dll"
+if strsize=-1   { dialog "wv2s.dllが見つかりません。",1,"Error 0x03" : end }
+WV2Env 0, 0
+pEnv = stat
+if ( pEnv == 0 ){ dialog "WebView2の展開に失敗しました。\n書き込み権限がないか、WebView2ランタイムがありません。",1,"Error 0x04" : end }
+onexit *ON_EXIT
+WV2Ctrl pEnv, hwnd
+curCtrl = stat
+prm = varptr(curView)
+ComCall curCtrl, WV2Ctrl_get_CoreWebView2, prm, 1
+WV2SetSize curCtrl, 0, 32, 640,480
+
+sdim SearchBox,65535
+font "",24
+objmode 2
+objsize  32,32
+pos   0, 0 : objimage 1,  0,0,  0,0,  0,0 : button gosub "",  *GoBack    : idBtn_goBack    = stat
+pos  32, 0 : objimage 1, 32,0, 32,0, 32,0 : button gosub "",  *GoForward : idBtn_goForward = stat
+pos  64, 0 : objimage 1,192,0, 64,0,192,0 : button gosub "",  *Pin
+pos  96, 0 : objimage 1,128,0,128,0,128,0 : button       "",  *Config
+objsize 200,30
+pos 144, 0 : input SearchBox
+objsize  32,32
+pos 544, 0 : objimage 1,160,0,160,0,160,0 : button gosub "?", *About
+pos 576, 0                                : button gosub "_", *Minimize
+pos 608, 0                                : button       "x", *ON_EXIT
+
+WV2HdlNew 0, hwnd, 0x9000
+resRecvHdl = stat
+dim token, 2
+prm = resRecvHdl, varptr(token)
+ComCall curView, WV2_add_DocumentTitleChanged, prm, 2
+	
+// 初期ページへNavigate
+WV2Navigate curCtrl, "https://"+FirstPage
+goto *MainLoop
+
+*MainLoop
+if SysMode=1{
+	if length(ExecuteKey)=2 or length(ExecuteKey)=3{
+		repeat
+			await 10
+			flag=1
+			repeat length(ExecuteKey)
+				getkey tmp,ExecuteKey(cnt)
+				if tmp=0 : flag=0
+			loop
+			if flag = 1 {
+				if IsActivate=1 {   //いま表示されている時
+					gosub *Minimize
+					IsActivate=0
+				}else{
+					SetLayeredWindowAttributes MainWnd, 0, 0 / 100, 2
+					sendmsg hwnd, $112, $F120
+					repeat 100
+						if cnt>(100-LayerLevel): continue
+						SetLayeredWindowAttributes MainWnd, 0, 255 * cnt / 100, 2
+						await 3
+					loop
+					IsActivate=1
+				}
+			}
+		loop
+	}
+}
+if Sysmode=2{
+	IsActivate=1
+	repeat
+		await 100
+		if ginfo(4)<ginfo(0) and ginfo(0)<ginfo(6) and ginfo(5)<ginfo(1) and ginfo(1)<ginfo(7){
+			SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+		}else{
+			SetLayeredWindowAttributes MainWnd, 0, 255 * 0 / 100, 2
+		}
+	loop
+}
+stop
+
+/* ---------------------------------------------------------
+	WV2 Label
+   --------------------------------------------------------- */
+*GoBack
+	prm = 0
+	ComCall curView, WV2_get_GoBack, prm, 0
+	return
+*GoForward
+	prm = 0
+	ComCall curView, WV2_get_GoForward, prm, 0
+	return
+
+/* ---------------------------------------------------------
+	User Event
+   --------------------------------------------------------- */
+*Pin
+	if IsForceFlow=0{
+		gsel 1
+		pos 192,0:gcopy 1,64,0,32,32
+		IsForceFlow=1
+		gsel 0,2
+	}else{
+		gsel 1
+		pos 192,0:gcopy 1,96,0,32,32
+		IsForceFlow=0
+		gsel 0,1
+	}
+return
+
+*Config
+	onclick 0
+	screen 2,320,200,0
+	title ""+ApplicationName+" ["+ApplicationVersion+"] - 設定"
+	width ,,(ginfo(0)-100),(ginfo(1))
+	GetWindowLong hwnd, -16
+	SetWindowLong hwnd, -16, stat - $80000
+	syscolor 4:boxf
+	color 0,0,0
+	gsel 2,2
+	objsize 150,32
+	pos 170,  0 : button "設定を保存して閉じる", *Config_Close
+	objsize 150,22
+	pos   2, 31 : mes "既定の検索エンジン:\n起動時のページ    :\n透明度            :"
+	pos 170, 32 : combox SearchEngineList,,"Google\nMS Bing\nDuckDuckGo\nBrave Search\nEcosia\nWikipedia(日本語)\n百度(Baidu)\n常にURLとみなす"
+	objsize 150,20
+	pos 170, 52 : input FirstPage
+	pos   0, 90 : winobj "msctls_trackbar32", "", , $50000000 | $100, 320, 30
+	hTrackbar = objinfo(stat, 2)
+	sendmsg hTrackbar, $405, 1, LayerLevel
+	oncmd gosub *vscroll, $114
+	pos 170, 72 : input LayerLevel : objenable 4,0 : objprm 4,""+LayerLevel+"%"
+	pos   2,120 : mes "動作モード        :"
+	pos 170,120 : combox SysMode,,"静的\nショートカットモード\nマウスが来た時"
+	tmp="静的                	: 常に指定された透明度で表示。\nショートカットモード 	: キーで表示/非表示を制御。\nマウスが来たとき	: マウスがウィンドウ上にある時表示。"
+	objsize 316,50
+	pos   2,148 : mesbox tmp,,,0,0
+stop
+
+*Config_Close
+	if LayerLevel>70 {
+		dialog "透明度が高すぎます。\n本当にこのまま続行しますか?",2,"警告"
+		if stat=7{stop}
+	}
+	gsel 2,-1
+	if IsForceFlow=0{
+		gsel 0,1
+	}else{
+		gsel 0,2
+	}
+	onclick gosub *OnClicked
+	SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+goto *MainLoop
+
+*Minimize
+	repeat 100
+		if (100-cnt)>(100-LayerLevel) : continue
+		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-cnt) / 100, 2
+		await 3
+	loop
+	sendmsg hwnd, $112, $F020
+	SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+return
+
+*About
+	//画面サイズ把握系
+	GetDispMaxSize w,h: p=stat
+	if p=0 { dialog "画面サイズの把握に失敗しました。",1,"Error 0x01" }
+	SizeMax = ""+w+"x"+h
+	GetMultiDispInfo 16,prm,rect: p=stat
+	if p=0 { dialog "マルチディスプレイ情報の取得に失敗しました。",1,"Error 0x02" }
+	DisplayNum   = prm(2)
+	PrimaryIndex = prm(3)
+	DisplayInfo  = ""
+	repeat DisplayNum
+		p=cnt*4
+		x1=rect(p): y1=rect(p+1): x2=rect(p+2): y2=rect(p+3)
+		w=abs(x1-x2): h=abs(y1-y2)
+		DisplayInfo+= "[Display #"+cnt+"] X1:"+x1+" Y1:"+y1+" X2:"+x2+" Y2:"+y2+" ("+w+"x"+h+")\n"
+	loop
+
+	tmp =""+ApplicationName+" はABATBelieverによる個人製作ソフトウェアです。"
+	tmp+="\nMITライセンスの下、「現状のまま」提供されます。"
+	tmp+="\n\n最大サイズ: "+SizeMax+"\nディスプレイ数: "+DisplayNum
+	tmp+="\nプライマリのID: "+PrimaryIndex+"\n"+DisplayInfo
+	dialog tmp,0,""+ApplicationName+" ["+ApplicationVersion+"]"
+return
+
+/* ---------------------------------------------------------
+	WinAPI Event
+   --------------------------------------------------------- */
+*OnClicked
+	if wparam = 1 {sendmsg hwnd, $A1,2}
+	SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+return
+
+*KeyPressed
+	if wparam = 13 {
+		objsel -1
+		if stat = 4 : {
+			stick tmp,1,0
+			if tmp&64 {
+				split SearchBox,"://",tmp
+				if length(tmp)=2 and tmp(0)="http " {
+					WV2Navigate curCtrl, SearchBox
+				}else:if length(tmp)=2 and tmp(0)="https"{
+					WV2Navigate curCtrl, SearchBox
+				}else{
+					WV2Navigate curCtrl, "https://"+SearchBox
+				}
+			}else{//Google/Bing/DuckDuckGo/Brave/Ecosia/Wikipedia.jp/百度/常にURLとみなす
+				switch SearchEngineList
+				case 0
+					WV2Navigate curCtrl, "https://www.google.com/search?q="+SearchBox
+					swbreak
+				case 1
+					WV2Navigate curCtrl, "https://www.bing.com/search?q="+SearchBox+"&form=QBLH"
+					swbreak
+				case 2
+					WV2Navigate curCtrl, "https://duckduckgo.com/?q="+SearchBox+"&ia=web"
+					swbreak
+				case 3
+					WV2Navigate curCtrl, "https://search.brave.com/search?q="+SearchBox
+					swbreak
+				case 4
+					WV2Navigate curCtrl, "https://www.ecosia.org/search?method=index&q="+SearchBox
+					swbreak
+				case 5
+					WV2Navigate curCtrl, "https://ja.wikipedia.org/wiki/"+SearchBox
+					swbreak
+				case 6
+					WV2Navigate curCtrl, "https://www.baidu.com/s?wd="+SearchBox
+					swbreak
+				default
+					split SearchBox,"://",tmp
+					if length(tmp)=2 and tmp(0)="http " {
+						WV2Navigate curCtrl, SearchBox
+					}else:if length(tmp)=2 and tmp(0)="https"{
+						WV2Navigate curCtrl, SearchBox
+					}else{
+						WV2Navigate curCtrl, "https://"+SearchBox
+					}
+					swbreak
+				swend
+			}
+			objprm 4,""
+			}
+	}
+return
+
+*vscroll
+	if lparam = hTrackbar {
+		sendmsg hTrackbar, $400
+		LayerLevel = stat
+		if LayerLevel>70{
+			objprm 4,str(LayerLevel)+"% <Danger>"
+		}else{
+			objprm 4,str(LayerLevel)+"%"
+		}
+		gsel 0
+		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+		gsel 2
+	}
+return
+
+*ON_EXIT
+	if ( resRecvHdl ){
+		prm = token(0), token(1)
+		ComCall curView, WV2_del_DocumentTitleChanged, prm, 2
+	}
+	if curView : ComDel curView
+	if curCtrl : ComDel curCtrl
+	if pEnv : ComDel pEnv
+	repeat 100
+		if (100-cnt)>(100-LayerLevel) : continue
+		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-cnt) / 100, 2
+		await 3
+	loop
+	end
