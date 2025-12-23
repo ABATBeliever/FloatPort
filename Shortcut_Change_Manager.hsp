@@ -1,0 +1,166 @@
+/* ---------------------------------------------------------
+	Window
+   --------------------------------------------------------- */
+*Shortcut_Change
+	screen 3,320,200,8
+	gsel 0,-1 : gsel 2,-1
+	gsel 3,2
+	dim NewExecKey
+	width ,,(ginfo(0)-100),(ginfo(1))
+goto *Shortcut_Change_1
+
+/* ---------------------------------------------------------
+	Phase 1
+   --------------------------------------------------------- */
+*Shortcut_Change_1
+	cls
+	redraw 0
+	SpecialKey=0
+	title ""+ApplicationName+" ["+ApplicationVersion+"] - ショートカットの変更"
+	syscolor 4:boxf:color 0,0,0
+	pos 2,2 : mes "ショートカットキーを変更しています\nキャンセルする場合、右上のxを押します。\n\n「1つめ」に選ぶキーを押すか、\n下にある特殊キーの一覧で選択してださい。"
+	objsize 318,40
+	pos   2,100 : combox SpecialKey,,"Shift\nCtrl\nALT\nPageUP\nPageDown\nEND\nHOME\nF1\nF2\nF3\nF4\nF5\nF6\nF7\nF8\nF9\nF10"
+	objsize 118,50
+	pos 102,130 : button "特殊キーを選択する",*Shortcut_Change_KeyS_1
+	redraw 1
+	onkey *Shortcut_Change_KeyN_1
+stop
+
+*Shortcut_Change_KeyN_1
+	dim tmp
+	tmp(0)=iparam
+	if tmp(0)!=0 and tmp(0)!=13 and tmp(0)!=16{
+		dialog "1つめにキー「"+Shortcut_NumToText(tmp)+"("+tmp(0)+")」を登録しますか?",2,"ショートカットの変更"
+		if stat=6 : NewExecKey(0)=tmp(0) : goto *Shortcut_Change_2
+	}
+stop
+
+*Shortcut_Change_KeyS_1
+	dim tmp
+	switch SpecialKey
+		case 0 : tmp(0)=16 : swbreak	//Shift
+		case 1 : tmp(0)=17 : swbreak	//Ctrl
+		case 2 : tmp(0)=18 : swbreak	//ALT
+		case 3 : tmp(0)=33 : swbreak	//PageUP
+		case 4 : tmp(0)=34 : swbreak	//PageDown
+		case 5 : tmp(0)=35 : swbreak	//END
+		case 6 : tmp(0)=36 : swbreak	//HOME
+		default
+			tmp(0) = SpecialKey + 105	//Fn
+			swbreak
+		swend
+	dialog "1つめにキー「"+Shortcut_NumToText(tmp(0))+"("+tmp(0)+")」を登録しますか?",2,"ショートカットの変更"
+	if stat=6 : NewExecKey(0)=tmp(0)     : goto *Shortcut_Change_2
+stop
+
+/* ---------------------------------------------------------
+	Phase 2
+   --------------------------------------------------------- */
+*Shortcut_Change_2
+	cls
+	redraw 0
+	SpecialKey=0
+	title ""+ApplicationName+" ["+ApplicationVersion+"] - ショートカットの変更"
+	syscolor 4:boxf:color 0,0,0
+	pos 2,2 : mes "ショートカットキーを変更しています\nキャンセルする場合、右上のxを押します。\n\n「2つめ」に選ぶキーを押すか、\n下にある特殊キーの一覧で選択してださい。"
+	objsize 318,40
+	pos   2,100 : combox SpecialKey,,"Shift\nCtrl\nALT\nPageUP\nPageDown\nEND\nHOME\nF1\nF2\nF3\nF4\nF5\nF6\nF7\nF8\nF9\nF10"
+	objsize 118,50
+	pos 102,130 : button "特殊キーを選択する",*Shortcut_Change_KeyS_2
+	redraw 1
+	onkey *Shortcut_Change_KeyN_2
+stop
+
+*Shortcut_Change_KeyN_2
+	dim tmp
+	tmp(0)=iparam
+	if tmp(0)!=0 and tmp(0)!=13 and tmp(0)!=16{
+		dialog "2つめにキー「"+Shortcut_NumToText(tmp)+"("+tmp(0)+")」を登録しますか?",2,"ショートカットの変更"
+		if stat=6 : NewExecKey(1)=tmp(0) : goto *Shortcut_Change_3
+	}
+stop
+
+*Shortcut_Change_KeyS_2
+	dim tmp
+	switch SpecialKey
+		case 0 : tmp(0)=16 : swbreak	//Shift
+		case 1 : tmp(0)=17 : swbreak	//Ctrl
+		case 2 : tmp(0)=18 : swbreak	//ALT
+		case 3 : tmp(0)=33 : swbreak	//PageUP
+		case 4 : tmp(0)=34 : swbreak	//PageDown
+		case 5 : tmp(0)=35 : swbreak	//END
+		case 6 : tmp(0)=36 : swbreak	//HOME
+		default
+			tmp(0) = SpecialKey + 105	//Fn
+			swbreak
+		swend
+	dialog "2つめにキー「"+Shortcut_NumToText(tmp(0))+"("+tmp(0)+")」を登録しますか?",2,"ショートカットの変更"
+	if stat=6 : NewExecKey(1)=tmp(0)     : goto *Shortcut_Change_3
+stop
+
+/* ---------------------------------------------------------
+	Phase 3
+   --------------------------------------------------------- */
+*Shortcut_Change_3
+	cls
+	redraw 0
+	SpecialKey=0
+	title ""+ApplicationName+" ["+ApplicationVersion+"] - ショートカットの変更"
+	syscolor 4:boxf:color 0,0,0
+	pos 2,2 : mes "ショートカットキーを変更しています\nキャンセルする場合、右上のxを押します。\n\n「3つめ」に選ぶキーを押すか、確定か、\n下にある特殊キーの一覧で選択してださい。"
+	objsize 318,40
+	pos   2,100 : combox SpecialKey,,"Shift\nCtrl\nALT\nPageUP\nPageDown\nEND\nHOME\nF1\nF2\nF3\nF4\nF5\nF6\nF7\nF8\nF9\nF10"
+	objsize 118,50
+	pos   2,130 : button "特殊キーを選択する",*Shortcut_Change_KeyS_3
+	pos 202,130 : button "2つで確定",*Shortcut_Change_Sum
+	redraw 1
+	onkey *Shortcut_Change_KeyN_3
+stop
+
+*Shortcut_Change_KeyN_3
+	dim tmp
+	tmp(0)=iparam
+	if tmp(0)!=0 and tmp(0)!=13 and tmp(0)!=16{
+		dialog "3つめにキー「"+Shortcut_NumToText(tmp)+"("+tmp(0)+")」を登録しますか?",2,"ショートカットの変更"
+		if stat=6 : NewExecKey(2)=tmp(0) : goto *Shortcut_Change_Sum
+	}
+stop
+
+*Shortcut_Change_KeyS_3
+	dim tmp
+	switch SpecialKey
+		case 0 : tmp(0)=16 : swbreak	//Shift
+		case 1 : tmp(0)=17 : swbreak	//Ctrl
+		case 2 : tmp(0)=18 : swbreak	//ALT
+		case 3 : tmp(0)=33 : swbreak	//PageUP
+		case 4 : tmp(0)=34 : swbreak	//PageDown
+		case 5 : tmp(0)=35 : swbreak	//END
+		case 6 : tmp(0)=36 : swbreak	//HOME
+		default
+			tmp(0) = SpecialKey + 105	//Fn
+			swbreak
+		swend
+	dialog "3つめにキー「"+Shortcut_NumToText(tmp(0))+"("+tmp(0)+")」を登録しますか?",2,"ショートカットの変更"
+	if stat=6 : NewExecKey(2)=tmp(0)     : goto *Shortcut_Change_Sum
+stop
+
+/* ---------------------------------------------------------
+	Final
+   --------------------------------------------------------- */
+*Shortcut_Change_Sum
+	dialog "登録するショートカットは、「"+Shortcut_NumToText(NewExecKey)+"」でいいですか?",2,"ショートカットの変更"
+	if stat=7 : goto *Shortcut_Change
+
+	dim ExecuteKey,length(NewExecKey)
+	repeat length(NewExecKey)
+		ExecuteKey(cnt)=NewExecKey(cnt)
+	loop
+	dim NewExecKey
+
+	gsel 3,-1
+	gsel 0,1 : gosub *Pin : gosub *Pin
+	dialog "ショートカットは、「"+Shortcut_NumToText(ExecuteKey)+"」に変更されました。",0,"ショートカットの変更"
+	
+	onkey gosub *KeyPressed
+	goto *Config

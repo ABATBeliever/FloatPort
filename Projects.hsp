@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 0.4.1
+	FloatPort ver. 0.6.0
 	Floating Browser for Windows
 
 	2025 ABATBeliever. All rights reserved.
@@ -7,8 +7,7 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "0.4.1"
-#define UpdateWebServer    "https://abatbeliever.net/app/FloatPort/upd.txt"
+#define ApplicationVersion "0.6.0"
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
@@ -28,8 +27,8 @@
 #include "lib/mod_mdispinfo.as"
 
 #include "user32.as"
+
 #func    SetProcessDPIAware "SetProcessDPIAware"
-//#func    SetProcessDpiAwarenessContext "SetProcessDpiAwarenessContext" int
 
 /* ---------------------------------------------------------
 	Define Constance
@@ -43,9 +42,6 @@
 #define global WV2_add_DocumentTitleChanged  46
 #define global WV2_del_DocumentTitleChanged  47
 #define global WV2_get_DocumentTitle         48
-
-#define ctype LOWORD(%1) (%1 & $FFFF)
-#define ctype HIWORD(%1) (%1 >> 16 & $FFFF)
 
 /* ---------------------------------------------------------
 	Load Settings
@@ -61,29 +57,70 @@ ExecuteKey(1)    = 17
 IsActivate       = 1 //0 非表示 / 1 表示
 
 /* ---------------------------------------------------------
+	Load Settings
+   --------------------------------------------------------- */
+#module
+	#defcfunc Shortcut_NumToText array tmp
+		if length(tmp)>3{
+			dialog "ショートカットキーの登録が無効です。",1,"Error 0x12"
+			end
+		}
+		res=""
+		repeat length(tmp)
+			switch tmp(cnt)
+			case  9 : res+="TAB"		: swbreak
+			case 16 : res+="Shift"		: swbreak
+			case 17 : res+="Ctrl"		: swbreak
+			case 18 : res+="ALT"		: swbreak
+			case 27 : res+="ESC"		: swbreak
+			case 32 : res+="Space"		: swbreak
+			case 33 : res+="PageUP"		: swbreak
+			case 34 : res+="PageDown"	: swbreak
+			case 35 : res+="END"		: swbreak
+			case 36 : res+="HOME"		: swbreak
+			default
+				if       tmp(cnt)>47  and tmp(cnt)< 58 {//  48～ 57 は 0～9
+					res+=str(tmp(cnt)-48)      : swbreak
+				}else:if tmp(cnt)>111 and tmp(cnt)<122 {// 112～121 は Fn
+					res+="F"+str(tmp(cnt)-111) : swbreak
+				}else:if tmp(cnt)> 64 and tmp(cnt)< 91 {//  65～ 90 は アルファベット
+					res+=strf("%c",tmp(cnt))
+				}else{									//  不明
+					res+="？("+tmp(cnt)+")"
+				}
+			swend
+			if cnt+1=length(tmp) : break
+			res+=", "
+		loop
+	return res
+#global
+
+/* ---------------------------------------------------------
 	Boot Routine
    --------------------------------------------------------- */
 if RequireHSPVersion>hspver { dialog "D-Version is outdated.",1,"Error 0x90" }
 
-// 高DPI対応(Windows 10 1703 ～)
+// 高DPI対応(Windows 10 ～)
 if varptr(SetProcessDPIAware) { SetProcessDPIAware }
 
 // 画像読み込み
 buffer 1,222,32,0
+redraw 0
 pos   0,0         : picload "include/Left.png"			,1
 pos  32,0         : picload "include/Right.png"			,1
 pos  64,0         : picload "include/Pin_Active.png"	,1
 pos  96,0         : picload "include/Pin_Negative.png"	,1
 pos 128,0         : picload "include/Config.png"		,1
 color 192,192,192 : boxf 160,2,190,30
-if IsForceFlow=0{
+if IsForceFlow=0{	// ピンの色反映用バッファ
 	pos 192,0:gcopy 1,96,0,32,32
 }else{
 	pos 192,0:gcopy 1,64,0,32,32
 }
+redraw 1
 gsel 0
 
-//ウィンドウ初期化
+// ウィンドウ初期化
 bgscr 0,640,480,8 : title ""+ApplicationName+" "+ApplicationVersion
 MainWnd=hwnd
 GetWindowLong hwnd, -20
@@ -93,15 +130,17 @@ SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
 gsel 0,1
 width ,,0,0
 
+// イベントのフラグ
 onclick gosub *OnClicked
 onkey   gosub *KeyPressed
+onerror goto  *OnErrorJump
 
-//WebViewの準備
+// WebViewの準備
 exist "wv2s.dll"
-if strsize=-1   { dialog "wv2s.dllが見つかりません。",1,"Error 0x03" : end }
+if strsize=-1   { dialog "wv2s.dllが見つかりません。",1,"Error 0x10" : end }
 WV2Env 0, 0
 pEnv = stat
-if ( pEnv == 0 ){ dialog "WebView2の展開に失敗しました。\n書き込み権限がないか、WebView2ランタイムがありません。",1,"Error 0x04" : end }
+if ( pEnv == 0 ){ dialog "WebView2の展開に失敗しました。\n書き込み権限がないか、WebView2ランタイムがありません。",1,"Error 0x11" : end }
 onexit *ON_EXIT
 WV2Ctrl pEnv, hwnd
 curCtrl = stat
@@ -109,6 +148,8 @@ prm = varptr(curView)
 ComCall curCtrl, WV2Ctrl_get_CoreWebView2, prm, 1
 WV2SetSize curCtrl, 0, 32, 640,480
 
+// UI
+redraw 0
 sdim SearchBox,65535
 font "",24
 objmode 2
@@ -122,8 +163,10 @@ pos 144, 0 : input SearchBox
 objsize  32,32
 pos 544, 0 : objimage 1,160,0,160,0,160,0 : button gosub "?", *About
 pos 576, 0                                : button gosub "_", *Minimize
-pos 608, 0                                : button       "x", *ON_EXIT
+pos 608, 0                                : button       "x", *ON_EXIT_TRUE
+redraw 1
 
+// 終了用フラグ
 WV2HdlNew 0, hwnd, 0x9000
 resRecvHdl = stat
 dim token, 2
@@ -135,7 +178,8 @@ WV2Navigate curCtrl, "https://"+FirstPage
 goto *MainLoop
 
 *MainLoop
-if SysMode=1{
+// モードが 1 or 2 の時はループ。 そうでない場合下のstopへ
+if SysMode=1{	// ショートカットのためのループ
 	if length(ExecuteKey)=2 or length(ExecuteKey)=3{
 		repeat
 			await 10
@@ -145,10 +189,10 @@ if SysMode=1{
 				if tmp=0 : flag=0
 			loop
 			if flag = 1 {
-				if IsActivate=1 {   //いま表示されている時
+				if IsActivate=1 {   // 　表示 → 非表示
 					gosub *Minimize
 					IsActivate=0
-				}else{
+				}else{              // 非表示 → 　表示
 					SetLayeredWindowAttributes MainWnd, 0, 0 / 100, 2
 					sendmsg hwnd, $112, $F120
 					repeat 100
@@ -160,12 +204,15 @@ if SysMode=1{
 				}
 			}
 		loop
+	}else{
+		dialog "ショートカットキーの登録が無効です。",1,"Error 0x12"
+		end
 	}
 }
-if Sysmode=2{
+if Sysmode=2{ // マウスの位置監視のためのループ
 	IsActivate=1
 	repeat
-		await 100
+		await 10
 		if ginfo(4)<ginfo(0) and ginfo(0)<ginfo(6) and ginfo(5)<ginfo(1) and ginfo(1)<ginfo(7){
 			SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
 		}else{
@@ -173,6 +220,7 @@ if Sysmode=2{
 		}
 	loop
 }
+// 静的な場合停止
 stop
 
 /* ---------------------------------------------------------
@@ -192,12 +240,12 @@ stop
    --------------------------------------------------------- */
 *Pin
 	if IsForceFlow=0{
-		gsel 1
+		gsel 1 // 書き換え 　通常 → 最前面
 		pos 192,0:gcopy 1,64,0,32,32
 		IsForceFlow=1
 		gsel 0,2
 	}else{
-		gsel 1
+		gsel 1 // 書き換え 最前面 → 　通常
 		pos 192,0:gcopy 1,96,0,32,32
 		IsForceFlow=0
 		gsel 0,1
@@ -205,50 +253,41 @@ stop
 return
 
 *Config
+	// 設定画面
 	onclick 0
-	screen 2,320,200,0
+	screen 2,320,200,8
+	redraw 0
 	title ""+ApplicationName+" ["+ApplicationVersion+"] - 設定"
 	width ,,(ginfo(0)-100),(ginfo(1))
-	GetWindowLong hwnd, -16
-	SetWindowLong hwnd, -16, stat - $80000
-	syscolor 4:boxf
-	color 0,0,0
+	syscolor 4:boxf:color 0,0,0
 	gsel 2,2
-	objsize 150,32
-	pos 170,  0 : button "設定を保存して閉じる", *Config_Close
 	objsize 150,22
-	pos   2, 31 : mes "既定の検索エンジン:\n起動時のページ    :\n透明度            :"
-	pos 170, 32 : combox SearchEngineList,,"Google\nMS Bing\nDuckDuckGo\nBrave Search\nEcosia\nWikipedia(日本語)\n百度(Baidu)\n常にURLとみなす"
+	pos   2,  2 : mes "既定の検索エンジン:\n起動時のページ    :\n透明度            :"
+	pos 170,  1 : combox SearchEngineList,,"Google\nMS Bing\nDuckDuckGo\nBrave Search\nEcosia\nWikipedia(日本語)\n百度(Baidu)\n常にURLとみなす"
 	objsize 150,20
-	pos 170, 52 : input FirstPage
-	pos   0, 90 : winobj "msctls_trackbar32", "", , $50000000 | $100, 320, 30
+	pos 170, 21 : input FirstPage
+	pos   0, 60 : winobj "msctls_trackbar32", "", , $50000000 | $100, 320, 30
 	hTrackbar = objinfo(stat, 2)
 	sendmsg hTrackbar, $405, 1, LayerLevel
 	oncmd gosub *vscroll, $114
-	pos 170, 72 : input LayerLevel : objenable 4,0 : objprm 4,""+LayerLevel+"%"
-	pos   2,120 : mes "動作モード        :"
-	pos 170,120 : combox SysMode,,"静的\nショートカットモード\nマウスが来た時"
+	pos 170, 41 : input LayerLevel : objenable 3,0 : objprm 3,""+LayerLevel+"%"
+	pos   2, 90 : mes "動作モード        :\nショートカット    :"
+	pos 170, 88 : combox SysMode,,"静的\nショートカットモード\nマウスが来た時"
+	objsize 75,20
+	tmp=""
+	pos 170, 108 : input tmp : objenable 5,0 : objprm 5,Shortcut_NumToText(ExecuteKey)
+	pos 247, 108 : button "変更",*Shortcut_Change
 	tmp="静的                	: 常に指定された透明度で表示。\nショートカットモード 	: キーで表示/非表示を制御。\nマウスが来たとき	: マウスがウィンドウ上にある時表示。"
-	objsize 316,50
-	pos   2,148 : mesbox tmp,,,0,0
-stop
+	objsize 316,71
+	pos   2,128 : mesbox tmp,,,0,0
+	await 100
+	redraw 1
+stop // ここではループしない
 
-*Config_Close
-	if LayerLevel>70 {
-		dialog "透明度が高すぎます。\n本当にこのまま続行しますか?",2,"警告"
-		if stat=7{stop}
-	}
-	gsel 2,-1
-	if IsForceFlow=0{
-		gsel 0,1
-	}else{
-		gsel 0,2
-	}
-	onclick gosub *OnClicked
-	SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
-goto *MainLoop
+#include "Shortcut_Change_Manager.hsp"
 
 *Minimize
+	// 最小化
 	repeat 100
 		if (100-cnt)>(100-LayerLevel) : continue
 		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-cnt) / 100, 2
@@ -259,12 +298,13 @@ goto *MainLoop
 return
 
 *About
-	//画面サイズ把握系
+	// 画面サイズ把握
 	GetDispMaxSize w,h: p=stat
-	if p=0 { dialog "画面サイズの把握に失敗しました。",1,"Error 0x01" }
+	if p=0 { dialog "画面サイズの把握に失敗しました。",1,"Error 0x00" }
 	SizeMax = ""+w+"x"+h
 	GetMultiDispInfo 16,prm,rect: p=stat
-	if p=0 { dialog "マルチディスプレイ情報の取得に失敗しました。",1,"Error 0x02" }
+	if p=0 { dialog "マルチディスプレイ情報の取得に失敗しました。",1,"Error 0x01" }
+	DisplayNum   = 0
 	DisplayNum   = prm(2)
 	PrimaryIndex = prm(3)
 	DisplayInfo  = ""
@@ -292,10 +332,11 @@ return
 
 *KeyPressed
 	if wparam = 13 {
+		// バーの入力確定Enterかどうかの分岐
 		objsel -1
 		if stat = 4 : {
 			stick tmp,1,0
-			if tmp&64 {
+			if tmp&64 { // Ctrlが押されている場合URLとして解釈
 				split SearchBox,"://",tmp
 				if length(tmp)=2 and tmp(0)="http " {
 					WV2Navigate curCtrl, SearchBox
@@ -304,7 +345,7 @@ return
 				}else{
 					WV2Navigate curCtrl, "https://"+SearchBox
 				}
-			}else{//Google/Bing/DuckDuckGo/Brave/Ecosia/Wikipedia.jp/百度/常にURLとみなす
+			}else{// 通常の検索 選択肢 : Google/Bing/DuckDuckGo/Brave/Ecosia/Wikipedia.jp/百度/常にURLとみなす
 				switch SearchEngineList
 				case 0
 					WV2Navigate curCtrl, "https://www.google.com/search?q="+SearchBox
@@ -327,7 +368,7 @@ return
 				case 6
 					WV2Navigate curCtrl, "https://www.baidu.com/s?wd="+SearchBox
 					swbreak
-				default
+				default // 「常にURLとみなす」によるURLとしての解釈
 					split SearchBox,"://",tmp
 					if length(tmp)=2 and tmp(0)="http " {
 						WV2Navigate curCtrl, SearchBox
@@ -339,19 +380,21 @@ return
 					swbreak
 				swend
 			}
-			objprm 4,""
+			gsel 0
+			objprm 4,"" // 遷移後のバーのクリア
 			}
 	}
 return
 
 *vscroll
+	// 設定ウィンドウの透明度の項目の反映用
 	if lparam = hTrackbar {
 		sendmsg hTrackbar, $400
 		LayerLevel = stat
 		if LayerLevel>70{
-			objprm 4,str(LayerLevel)+"% <Danger>"
+			objprm 3,str(LayerLevel)+"% <Danger>"
 		}else{
-			objprm 4,str(LayerLevel)+"%"
+			objprm 3,str(LayerLevel)+"%"
 		}
 		gsel 0
 		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
@@ -359,17 +402,44 @@ return
 	}
 return
 
+*OnErrorJump
+	// エラーの際に飛ばす番地
+	dialog "特定できない重大な問題が発生しました。\n'OK'を押すと、直ちに終了されます。\n\n以下の内容とエラーの発生条件を、開発元に報告してくださると、\n今後のバージョンでの修正に役立ちます。\nlparam	:"+lparam+"\nwparam	:"+wparam+"\nVersion	:"+ApplicationVersion,1,"Error 0x91"
+	end:end
+
 *ON_EXIT
-	if ( resRecvHdl ){
+	if wparam = 2 { // 設定の保存
+		if LayerLevel>70 {
+			dialog "透明度が高すぎます。\n本当にこのまま続行しますか?",2,"警告"
+			if stat=7{stop}
+		}
+		gsel 2,-1
+		onclick gosub *OnClicked
+		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+		gsel 0
+		goto *MainLoop
+	}
+
+	if wparam = 3 { // キーボード変更中のキャンセル
+		dialog "キャンセルされました。\nショートカットキーは、「"+Shortcut_NumToText(ExecuteKey)+"」のままです。",0,"ショートカットの変更"
+		onkey gosub *KeyPressed
+		gsel 3,-1
+		gsel 0,1 : gosub *Pin : gosub *Pin
+		goto *Config
+	}
+goto *ON_EXIT_TRUE
+
+*ON_EXIT_TRUE
+	if ( resRecvHdl ){ // WV2セッションの終了を待つ
 		prm = token(0), token(1)
 		ComCall curView, WV2_del_DocumentTitleChanged, prm, 2
 	}
 	if curView : ComDel curView
 	if curCtrl : ComDel curCtrl
 	if pEnv : ComDel pEnv
-	repeat 100
+	repeat 100 // 画面を透明にする
 		if (100-cnt)>(100-LayerLevel) : continue
 		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-cnt) / 100, 2
 		await 3
 	loop
-	end
+	end // 完全な終了
