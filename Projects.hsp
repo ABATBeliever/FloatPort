@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 0.6.0
+	FloatPort ver. 0.7.0
 	Floating Browser for Windows
 
 	2025 ABATBeliever. All rights reserved.
@@ -7,7 +7,7 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "0.6.0"
+#define ApplicationVersion "0.7.0"
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
@@ -24,6 +24,7 @@
 #epackdir "include/*"
 
 #include "mod_wv2s.hsp"
+#include "lib/mod_openini.as"
 #include "lib/mod_mdispinfo.as"
 
 #include "user32.as"
@@ -46,18 +47,40 @@
 /* ---------------------------------------------------------
 	Load Settings
    --------------------------------------------------------- */
-IsForceFlow      = 0  //0 無効 / 1 有効
-LayerLevel       = 20 //透明度(100-x)
-FirstPage        = "www.google.com" //https://は補完
-SearchEngineList = 0  //Google/Bing/DuckDuckGo/Brave/Ecosia/Wikipedia.jp/百度/常にURLとみなす
-SysMode          = 0
-ExecuteKey(0)    = 16
-ExecuteKey(1)    = 17
+exist "config.ini"
+if strsize=-1 { bcopy "include/default.ini","config.ini" } // 無い場合デフォルトを書き出し
 
-IsActivate       = 1 //0 非表示 / 1 表示
+SetINI_File dir_cur+"\\config.ini",2048
+
+// int
+
+IsActivate       = 1
+SysMode          = getini_int("General","SysMode"          , 0)
+IsForceFlow      = getini_int("General","IsForceFlow"      , 0)
+LayerLevel       = getini_int("General","LayerLevel"       ,20)
+SearchEngineList = getini_int("General","SearchEngineList" , 0)
+
+//文字列、「,」連結を配列のintに代入
+sdim tmp
+tmp = getini_str("General","ExecuteKey","")
+split tmp,",",tmp
+dim ExecuteKey,length(tmp)
+repeat length(tmp)
+	ExecuteKey(cnt)=int(tmp(cnt))
+loop
+
+//文字列、「https://」「http://」を削除して文字型に代入
+sdim tmp
+tmp = getini_str("General","FirstPage","www.google.com")
+if instr(tmp,0,"http://")!=-1 or instr(tmp,0,"https://")!=-1 {
+	split tmp,"://",tmp
+	FirstPage=tmp(1)
+}else{
+	FirstPage=tmp
+}
 
 /* ---------------------------------------------------------
-	Load Settings
+	Module
    --------------------------------------------------------- */
 #module
 	#defcfunc Shortcut_NumToText array tmp
@@ -104,7 +127,7 @@ if RequireHSPVersion>hspver { dialog "D-Version is outdated.",1,"Error 0x90" }
 if varptr(SetProcessDPIAware) { SetProcessDPIAware }
 
 // 画像読み込み
-buffer 1,222,32,0
+buffer 1,256,32,0
 redraw 0
 pos   0,0         : picload "include/Left.png"			,1
 pos  32,0         : picload "include/Right.png"			,1
@@ -312,14 +335,22 @@ return
 		p=cnt*4
 		x1=rect(p): y1=rect(p+1): x2=rect(p+2): y2=rect(p+3)
 		w=abs(x1-x2): h=abs(y1-y2)
-		DisplayInfo+= "[Display #"+cnt+"] X1:"+x1+" Y1:"+y1+" X2:"+x2+" Y2:"+y2+" ("+w+"x"+h+")\n"
+		DisplayInfo+= "[ID "+cnt+"] X1:"+x1+" Y1:"+y1+" X2:"+x2+" Y2:"+y2+" ("+w+"x"+h+")\n"
 	loop
 
 	tmp =""+ApplicationName+" はABATBelieverによる個人製作ソフトウェアです。"
 	tmp+="\nMITライセンスの下、「現状のまま」提供されます。"
-	tmp+="\n\n最大サイズ: "+SizeMax+"\nディスプレイ数: "+DisplayNum
-	tmp+="\nプライマリのID: "+PrimaryIndex+"\n"+DisplayInfo
-	dialog tmp,0,""+ApplicationName+" ["+ApplicationVersion+"]"
+	tmp+="\n\n<関連ウェブサイト>"
+	tmp+="\n公式ページ	: https://abatbeliever.net/app/FloatPort/"
+	tmp+="\nリポジトリ	: https://github.com/ABATBeliever/FloatPort"
+	tmp+="\n\n<依存関係>"
+	tmp+="\n・mod_openini.as   - v1.0\n　ini操作モジュール by 窓月らら(Lala Madotuki)氏"
+	tmp+="\n・mod_mdispinfo.as - v1.3\n　マルチディスプレイ情報取得モジュール by 窓月らら(Lala Madotuki)氏"
+	tmp+="\n・wv2s.dll\n　WebView2をHSP3で呼び出すDLL by Hiro氏"
+	tmp+="\n\n======================================="
+	tmp+="\n最大画面解像度: "+SizeMax+" / 総ディスプレイ数: "+DisplayNum
+	tmp+="\nプライマリのIDは "+PrimaryIndex+" です。\n"+DisplayInfo
+	dialog tmp,0,""+ApplicationName+" v"+ApplicationVersion+""
 return
 
 /* ---------------------------------------------------------
@@ -331,6 +362,7 @@ return
 return
 
 *KeyPressed
+	if SearchBox="" : return
 	if wparam = 13 {
 		// バーの入力確定Enterかどうかの分岐
 		objsel -1
@@ -437,6 +469,30 @@ goto *ON_EXIT_TRUE
 	if curView : ComDel curView
 	if curCtrl : ComDel curCtrl
 	if pEnv : ComDel pEnv
+
+	// 普通のini型A
+	setini_int "General",         "SysMode",int(SysMode)
+	setini_int "General",     "IsForceFlow",int(IsForceFlow)
+	setini_int "General",      "LayerLevel",int(LayerLevel)
+	setini_int "General","SearchEngineList",int(SearchEngineList)
+
+	sdim tmp // ショートカットキーは,で連続される文字列
+	repeat length(ExecuteKey)
+		tmp+=ExecuteKey(cnt)
+		if (cnt+1)=length(ExecuteKey) : break
+		tmp+=","
+	loop
+	setini_str "General","ExecuteKey",tmp
+
+	//URLは、「https://」,「http://」を削除する
+	if instr(FirstPage,0,"://")!=-1{
+		sdim tmp
+		split FirstPage,"://",tmp
+		setini_str "General","FirstPage",tmp(1)
+	}else{
+		setini_str "General","FirstPage",FirstPage
+	}
+
 	repeat 100 // 画面を透明にする
 		if (100-cnt)>(100-LayerLevel) : continue
 		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-cnt) / 100, 2
