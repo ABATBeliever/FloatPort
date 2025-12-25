@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 0.7.0
+	FloatPort ver. 1.0.0
 	Floating Browser for Windows
 
 	2025 ABATBeliever. All rights reserved.
@@ -7,15 +7,15 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "0.7.0"
+#define ApplicationVersion "1.0.0"
+#define ApplicationUpdateV 100
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
 	Build Config
    --------------------------------------------------------- */
-#include "hsp3utf.as"
 #packopt version "src/Build.ini"
-//#packopt icon    "src/image.ico"
+#packopt icon    "src/FloatPort.ico"
 #packopt hide 1
 
 /* ---------------------------------------------------------
@@ -28,6 +28,7 @@
 #include "lib/mod_mdispinfo.as"
 
 #include "user32.as"
+#include "hspinet.as"
 
 #func    SetProcessDPIAware "SetProcessDPIAware"
 
@@ -43,6 +44,8 @@
 #define global WV2_add_DocumentTitleChanged  46
 #define global WV2_del_DocumentTitleChanged  47
 #define global WV2_get_DocumentTitle         48
+
+if RequireHSPVersion>hspver { dialog "D-Version is outdated.",1,"Error 0x90" }
 
 /* ---------------------------------------------------------
 	Load Settings
@@ -62,7 +65,7 @@ SearchEngineList = getini_int("General","SearchEngineList" , 0)
 
 //文字列、「,」連結を配列のintに代入
 sdim tmp
-tmp = getini_str("General","ExecuteKey","")
+tmp = getini_str("General","ExecuteKey","16,17")
 split tmp,",",tmp
 dim ExecuteKey,length(tmp)
 repeat length(tmp)
@@ -119,10 +122,48 @@ if instr(tmp,0,"http://")!=-1 or instr(tmp,0,"https://")!=-1 {
 #global
 
 /* ---------------------------------------------------------
+	Update Check
+   --------------------------------------------------------- */
+IsLatest=1
+exist "hspinet.dll"
+if strsize!=-1 {
+	netinit
+	if stat {
+		dialog "hspinetの初期化に失敗しました。\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x20"
+	}else{
+		neturl "https://abatbeliever.net/app/FloatPort/upd.txt"
+		netrequest_get ""
+		dim res
+		sdim buf
+		repeat
+			netexec res
+			if res > 0 {
+				sdim buf,netgetv_size()
+				netgetv_data buf
+				split buf,",",buf
+				if length(buf)!=3               : dialog "更新確認に失敗しました。(無効な応答)\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x21"        : break
+				if buf(0)      != "[FloatPort Update]" : dialog "更新確認に失敗しました。(無効な応答)\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x22" : break
+				if int(buf(1))  < ApplicationUpdateV   : dialog "これは開発版です。",0,"info"                                                                         : break
+				strrep buf(2),"<br>","\n"
+				if int(buf(1))  > ApplicationUpdateV   : dialog "新しいバージョンが公開されました！\n"+buf(2),0,"更新のお知らせ" : IsLatest=0 : break
+				break
+			}
+			if res < 0 {
+				dialog "更新確認に失敗しました。(接続失敗)\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x23"
+				break
+			}
+			await 10
+			if cnt = 200 {
+				dialog "更新確認に失敗しました。(タイムアウト)\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x24"
+				break
+			}
+		loop
+	}
+}
+
+/* ---------------------------------------------------------
 	Boot Routine
    --------------------------------------------------------- */
-if RequireHSPVersion>hspver { dialog "D-Version is outdated.",1,"Error 0x90" }
-
 // 高DPI対応(Windows 10 ～)
 if varptr(SetProcessDPIAware) { SetProcessDPIAware }
 
@@ -141,7 +182,6 @@ if IsForceFlow=0{	// ピンの色反映用バッファ
 	pos 192,0:gcopy 1,64,0,32,32
 }
 redraw 1
-gsel 0
 
 // ウィンドウ初期化
 bgscr 0,640,480,8 : title ""+ApplicationName+" "+ApplicationVersion
@@ -150,7 +190,7 @@ GetWindowLong hwnd, -20
 SetWindowLong hwnd, -20, stat | $80000
 SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
 
-gsel 0,1
+if IsForceFlow=0{ gsel 0,1 } else { gsel 0,2 }
 width ,,0,0
 
 // イベントのフラグ
@@ -197,7 +237,11 @@ prm = resRecvHdl, varptr(token)
 ComCall curView, WV2_add_DocumentTitleChanged, prm, 2
 	
 // 初期ページへNavigate
-WV2Navigate curCtrl, "https://"+FirstPage
+if IsLatest {
+	WV2Navigate curCtrl, "https://"+FirstPage
+}else{
+	WV2Navigate curCtrl, "https://abatbeliever.net/app/FloatPort/"
+}
 goto *MainLoop
 
 *MainLoop
@@ -367,7 +411,7 @@ return
 		// バーの入力確定Enterかどうかの分岐
 		objsel -1
 		if stat = 4 : {
-			stick tmp,1,0
+			stick tmp,64,1
 			if tmp&64 { // Ctrlが押されている場合URLとして解釈
 				split SearchBox,"://",tmp
 				if length(tmp)=2 and tmp(0)="http " {
