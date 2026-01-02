@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 1.0.0
+	FloatPort ver. 1.1.0b
 	Floating Browser for Windows
 
 	2025 ABATBeliever. All rights reserved.
@@ -7,8 +7,8 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "1.0.0"
-#define ApplicationUpdateV 100
+#define ApplicationVersion "1.1.0b"
+#define ApplicationUpdateV 110
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
@@ -24,13 +24,17 @@
 #epackdir "include/*"
 
 #include "mod_wv2s.hsp"
+#include "hspext.as"
 #include "lib/mod_openini.as"
 #include "lib/mod_mdispinfo.as"
 
 #include "user32.as"
 #include "hspinet.as"
 
+#uselib "kernel32"
+
 #func    SetProcessDPIAware "SetProcessDPIAware"
+#func    GetModuleMyName    "GetModuleFileNameA"  int,  var,  int
 
 /* ---------------------------------------------------------
 	Define Constance
@@ -46,6 +50,37 @@
 #define global WV2_get_DocumentTitle         48
 
 if RequireHSPVersion>hspver { dialog "D-Version is outdated.",1,"Error 0x90" }
+
+/* ---------------------------------------------------------
+	init
+   --------------------------------------------------------- */
+TriggerReboot = 0
+TriggerReset  = 0
+
+// リセットフラグがある場合WebView2セッションを消去
+if dir_cmdline = "Reset" {
+	exist "hspext.dll"
+	if strsize=-1 { 
+		dialog "hspext.dll が存在しないため、リセット処理は実施できませんでした。",1,"Error 0x02"
+	}else{
+		sdim res,65535
+		GetModuleMyName 0,res,65535
+		Before = res+".WebView2"    //Year     Month          Day             Hour            Min         Sec
+		After  = Before+"_old_"+gettime(0)+"."+gettime(1)+"."+gettime(3)+"."+gettime(4)+"."+gettime(5)+"."+gettime(6)
+		tmp ="本当にデータをリセットしますか?\n\n続行すると、\n・閲覧履歴\n・Cookie\nがバックアップの上削除され、設定は維持されます。"
+		tmp+="\n\nBefore:\n"+Before+"\nAfter:\n"+After+""
+		dialog tmp,2,"確認"
+		await 1000
+		if stat=6 {
+			fxren Before,after
+			if stat=0 {
+				dialog "リセットしました。",0
+			}else{
+				dialog "リセットに失敗しました。\n\nほかに、アクティブな"+ApplicationName+"が活動していませんか?",1,"Error 0x03"
+			}
+		}
+	}
+}
 
 /* ---------------------------------------------------------
 	Load Settings
@@ -205,6 +240,7 @@ WV2Env 0, 0
 pEnv = stat
 if ( pEnv == 0 ){ dialog "WebView2の展開に失敗しました。\n書き込み権限がないか、WebView2ランタイムがありません。",1,"Error 0x11" : end }
 onexit *ON_EXIT
+
 WV2Ctrl pEnv, hwnd
 curCtrl = stat
 prm = varptr(curView)
@@ -412,15 +448,31 @@ return
 		objsel -1
 		if stat = 4 : {
 			stick tmp,64,1
-			if tmp&64 { // Ctrlが押されている場合URLとして解釈
-				split SearchBox,"://",tmp
-				if length(tmp)=2 and tmp(0)="http " {
-					WV2Navigate curCtrl, SearchBox
-				}else:if length(tmp)=2 and tmp(0)="https"{
-					WV2Navigate curCtrl, SearchBox
-				}else{
-					WV2Navigate curCtrl, "https://"+SearchBox
-				}
+			if tmp&64 {          // Ctrlが押されている場合URLとして解釈
+				switch SearchBox // 特殊ショートカットかどうか
+					case "home"
+						WV2Navigate curCtrl, "https://"+FirstPage
+						swbreak
+					case "exit"
+						goto *ON_EXIT_TRUE
+						swbreak
+					case "restart"
+						TriggerReboot = 1 // 再起動　フラグ
+						goto *ON_EXIT_TRUE
+					case "reset"
+						TriggerReboot = 1 // 再起動　フラグ
+						TriggerReset  = 1 // リセットフラグ
+						goto *ON_EXIT_TRUE
+					default     // 通常の検索強制の場合
+						split SearchBox,"://",tmp
+						if length(tmp)=2 and tmp(0)="http " {
+							WV2Navigate curCtrl, SearchBox
+						}else:if length(tmp)=2 and tmp(0)="https"{
+							WV2Navigate curCtrl, SearchBox
+						}else{
+							WV2Navigate curCtrl, "https://"+SearchBox
+						}
+				swend
 			}else{// 通常の検索 選択肢 : Google/Bing/DuckDuckGo/Brave/Ecosia/Wikipedia.jp/百度/常にURLとみなす
 				switch SearchEngineList
 				case 0
@@ -542,4 +594,14 @@ goto *ON_EXIT_TRUE
 		SetLayeredWindowAttributes MainWnd, 0, 255 * (100-cnt) / 100, 2
 		await 3
 	loop
+	
+	if TriggerReboot { // 再起動フラグが有効なら自分自身を実行
+		sdim res,65535
+		GetModuleMyName 0,res,65535
+		if TriggerReset {
+			exec ""+res+" Reset" // リセットフラグがあるかどうか
+		}else{
+			exec ""+res
+		}
+	}
 	end // 完全な終了

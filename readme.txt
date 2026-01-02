@@ -1,10 +1,10 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  FloatPort ver. 1.0.0
+  FloatPort ver. 1.1.0b
   Floating Browser for Windows
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【 ソフト名 】FloatPort
-【バージョン】ver. 1.0.0
-【 開発段階 】Stable
+【バージョン】ver. 1.1.0b
+【 開発段階 】開発版 ビルドB
 【   種別   】フリーソフト
 【  対応OS  】Windows 10 / Windows 11
 【  開発者  】ABATBeliever
@@ -84,6 +84,12 @@ FloatPortはこのフォルダを常に参照し、履歴やCookieなどを保�
 ◇0x01
 　マルチディスプレイ情報の把握に失敗しました。OSのバージョン更新や再起動を試し
 　改善されない場合は開発にご一報ください。
+◇0x02
+　hspext.dllが存在しないため、リセット処理ができませんでした。
+　hspext.dllを再配置することで解決します。
+◇0x03
+　リセット処理に失敗しました。
+　ほかにアクティブなFloatPortプロセスがある場合は、終了してください。
 ◇0x10
 　wv2s.dllが見つかりません。同じフォルダ上にあることを確認してください。
 　無い場合は、再ダウンロードしてください。
@@ -137,11 +143,10 @@ FloatPortはこのフォルダを常に参照し、履歴やCookieなどを保�
 ・初のビルド。
 ==============================================================================
 ■ 謝辞
-「mod_openini.as」(ini操作モジュール)及び「mod_mdispinfo.as」
-(マルチディスプレイ情報取得モジュール)を開発した窓月らら(Lala Madotuki)氏と、
-「wv2s.dll」(WebView2をHSP3で呼び出すDLLを開発したHiro氏に感謝します。
-　WebView2ランタイムの開発とOSへの同封を行ったMicrosoft社に感謝します。
+depends.txtを参照ください。
 ==============================================================================
 ■ 配布元
 公式ページ	: https://abatbeliever.net/app/FloatPort/
 リポジトリ	: https://github.com/ABATBeliever/FloatPort/
+
+FloatPort 2025-2026 Made by ABATBeliever.
