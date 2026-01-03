@@ -3,7 +3,7 @@
 **浮遊する常駐型ブラウザ**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-green.svg)
 ![Version](https://img.shields.io/badge/Language-HSP3.7-yellow.svg)
 
 FloatPort は、画面上に常駐・浮遊する小型の Web ブラウザです。  
@@ -115,6 +115,8 @@ FloatPort はこのフォルダを参照し、以下の情報を保存します�
 |------------|------|
 | 0x00 | 画面サイズの把握に失敗 |
 | 0x01 | マルチディスプレイ情報の把握に失敗 |
+| 0x02 | hspext.dllをロードできないため、リセットできません |
+| 0x03 | リセット処理が失敗しました |
 | 0x10 | wv2s.dll が見つかりません |
 | 0x11 | WebView2 の展開に失敗 |
 | 0x12 | ショートカットキー登録が無効 |
@@ -127,6 +129,9 @@ FloatPort はこのフォルダを参照し、以下の情報を保存します�
 ---
 
 ## 更新履歴
+
+### ver. 1.1.0 Stable (2026/01/03)
+- コマンドショートカットが追加されました。
 
 ### ver. 1.0.0 Stable（2025/12/25）
 - アイコンを追加しました
