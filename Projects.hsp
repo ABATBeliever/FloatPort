@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 1.1.0b
+	FloatPort ver. 1.1.0
 	Floating Browser for Windows
 
 	2025 ABATBeliever. All rights reserved.
@@ -7,7 +7,7 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "1.1.0b"
+#define ApplicationVersion "1.1.0"
 #define ApplicationUpdateV 110
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
