@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 1.1.0
+	FloatPort ver. 1.2.0
 	Floating Browser for Windows
 
 	2025 ABATBeliever. All rights reserved.
@@ -7,8 +7,8 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "1.1.0"
-#define ApplicationUpdateV 110
+#define ApplicationVersion "1.2.0"
+#define ApplicationUpdateV 120
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
@@ -67,17 +67,10 @@ if dir_cmdline = "Reset" {
 		GetModuleMyName 0,res,65535
 		Before = res+".WebView2"    //Year     Month          Day             Hour            Min         Sec
 		After  = Before+"_old_"+gettime(0)+"."+gettime(1)+"."+gettime(3)+"."+gettime(4)+"."+gettime(5)+"."+gettime(6)
-		tmp ="本当にデータをリセットしますか?\n\n続行すると、\n・閲覧履歴\n・Cookie\nがバックアップの上削除され、設定は維持されます。"
-		tmp+="\n\nBefore:\n"+Before+"\nAfter:\n"+After+""
-		dialog tmp,2,"確認"
-		await 1000
-		if stat=6 {
-			fxren Before,after
-			if stat=0 {
-				dialog "リセットしました。",0
-			}else{
-				dialog "リセットに失敗しました。\n\nほかに、アクティブな"+ApplicationName+"が活動していませんか?",1,"Error 0x03"
-			}
+		await 3000
+		fxren Before,after
+		if stat!=0 {
+			dialog "リセットに失敗しました。\n\nほかに、アクティブな"+ApplicationName+"が活動していませんか?",1,"Error 0x03"
 		}
 	}
 }
@@ -86,7 +79,6 @@ if dir_cmdline = "Reset" {
 	Load Settings
    --------------------------------------------------------- */
 exist "config.ini"
-if strsize=-1 { bcopy "include/default.ini","config.ini" } // 無い場合デフォルトを書き出し
 
 SetINI_File dir_cur+"\\config.ini",2048
 
@@ -97,6 +89,9 @@ SysMode          = getini_int("General","SysMode"          , 0)
 IsForceFlow      = getini_int("General","IsForceFlow"      , 0)
 LayerLevel       = getini_int("General","LayerLevel"       ,20)
 SearchEngineList = getini_int("General","SearchEngineList" , 0)
+
+MainWndPosX      = getini_int("Screen","MainWndPosX" , 0)
+MainWndPosY      = getini_int("Screen","MainWndPosY" , 0)
 
 //文字列、「,」連結を配列のintに代入
 sdim tmp
@@ -223,10 +218,17 @@ bgscr 0,640,480,8 : title ""+ApplicationName+" "+ApplicationVersion
 MainWnd=hwnd
 GetWindowLong hwnd, -20
 SetWindowLong hwnd, -20, stat | $80000
-SetLayeredWindowAttributes MainWnd, 0, 255 * (100-LayerLevel) / 100, 2
+SetLayeredWindowAttributes MainWnd, 0, 0 / 100, 2
+width ,,MainWndPosX,MainWndPosY
+
+repeat 100
+	if cnt>(100-LayerLevel): continue
+	SetLayeredWindowAttributes MainWnd, 0, 255 * cnt / 100, 2
+	await 3
+loop
+IsActivate=1
 
 if IsForceFlow=0{ gsel 0,1 } else { gsel 0,2 }
-width ,,0,0
 
 // イベントのフラグ
 onclick gosub *OnClicked
@@ -571,6 +573,9 @@ goto *ON_EXIT_TRUE
 	setini_int "General",     "IsForceFlow",int(IsForceFlow)
 	setini_int "General",      "LayerLevel",int(LayerLevel)
 	setini_int "General","SearchEngineList",int(SearchEngineList)
+
+	setini_int "Screen" ,     "MainWndPosX",ginfo(4)
+	setini_int "Screen" ,     "MainWndPosY",ginfo(5)
 
 	sdim tmp // ショートカットキーは,で連続される文字列
 	repeat length(ExecuteKey)
