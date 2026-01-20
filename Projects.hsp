@@ -7,8 +7,8 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "1.2.0"
-#define ApplicationUpdateV 120
+#define ApplicationVersion "1.2.1"
+#define ApplicationUpdateV 121
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
@@ -221,13 +221,9 @@ SetWindowLong hwnd, -20, stat | $80000
 SetLayeredWindowAttributes MainWnd, 0, 0 / 100, 2
 width ,,MainWndPosX,MainWndPosY
 
-repeat 100
-	if cnt>(100-LayerLevel): continue
-	SetLayeredWindowAttributes MainWnd, 0, 255 * cnt / 100, 2
-	await 3
-loop
-IsActivate=1
+SetLayeredWindowAttributes MainWnd, 0, 0 / 100, 2
 
+IsActivate=1
 if IsForceFlow=0{ gsel 0,1 } else { gsel 0,2 }
 
 // イベントのフラグ
@@ -280,6 +276,13 @@ if IsLatest {
 }else{
 	WV2Navigate curCtrl, "https://abatbeliever.net/app/FloatPort/"
 }
+
+repeat 100
+	if cnt>(100-LayerLevel): continue
+	SetLayeredWindowAttributes MainWnd, 0, 255 * cnt / 100, 2
+	await 3
+loop
+
 goto *MainLoop
 
 *MainLoop
