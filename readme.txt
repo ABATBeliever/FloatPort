@@ -3,7 +3,7 @@
   Floating Browser for Windows
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【 ソフト名 】FloatPort
-【バージョン】ver. 1.2.1
+【バージョン】ver. 1.3.0
 【 開発段階 】Stable
 【   種別   】フリーソフト
 【  対応OS  】Windows 10 / Windows 11
@@ -122,6 +122,9 @@ FloatPortはこのフォルダを常に参照し、履歴やCookieなどを保�
 　未知の重大なエラーです。表示される情報と発生状況を、開発にご一報ください。
 ==============================================================================
 ■ 更新履歴
+◇ver. 1.3.0 Stable [2026/03/27]
+・更新確認方法を標準に準拠させました。
+・内部システムをUTF-8に移行しました。
 ◇ver. 1.2.1 Stable [2026/01/20]
 ・起動時のウィンドウ描画とWebView2のロードタイミングを調整しました。
 ◇ver. 1.2.0 Stable [2026/01/05]
@@ -170,7 +173,7 @@ FloatPortはこのフォルダを常に参照し、履歴やCookieなどを保�
 depends.txtを参照ください。
 ==============================================================================
 ■ 配布元
-公式ページ	: https://abatbeliever.net/app/FloatPort/
+公式ページ	: https://abatbeliever.net/software/bin/FloatPort/
 リポジトリ	: https://github.com/ABATBeliever/FloatPort/
 
 FloatPort 2025-2026 Made by ABATBeliever.

@@ -3,7 +3,7 @@
 **浮遊する常駐型ブラウザ**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.2.1-green.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-green.svg)
 ![Version](https://img.shields.io/badge/Language-HSP3.7-yellow.svg)
 
 FloatPort は、画面上に常駐・浮遊する小型の Web ブラウザです。  
@@ -130,6 +130,10 @@ FloatPort はこのフォルダを参照し、以下の情報を保存します�
 
 ## 更新履歴
 
+### ver. 1.3.0 Stable (2026/03/27)
+- 更新確認方法を標準に準拠させました。
+- 内部システムをUTF-8に移行しました。
+
 ### ver. 1.2.1 Stable (2026/01/20)
 - 起動時のウィンドウ描画とWebView2のロードタイミングを調整しました。
 
@@ -175,4 +179,4 @@ FloatPort はこのフォルダを参照し、以下の情報を保存します�
 ## 配布元
 
 - 公式ページ  
-  https://abatbeliever.net/app/FloatPort/
+  https://abatbeliever.net/software/bin/FloatPort/
