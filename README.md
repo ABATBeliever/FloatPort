@@ -3,7 +3,7 @@
 **浮遊する常駐型ブラウザ**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.3.0-green.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-green.svg)
 ![Version](https://img.shields.io/badge/Language-HSP3.7-yellow.svg)
 
 FloatPort は、画面上に常駐・浮遊する小型の Web ブラウザです。  

@@ -7,7 +7,7 @@
 	This Software is in Under MIT LICENSE.
    --------------------------------------------------------- */
 #define ApplicationName    "FloatPort"
-#define ApplicationVersion "1.3.0"
+#define ApplicationVersion "1.3.1"
 #define RequireHSPVersion  14092 //HSP 3.7 Stable
 
 /* ---------------------------------------------------------
@@ -35,6 +35,16 @@
 
 #func    SetProcessDPIAware "SetProcessDPIAware"
 #func    GetModuleMyName    "GetModuleFileNameA"  int,  var,  int
+
+/* ---------------------------------------------------------
+	DPI Config
+   --------------------------------------------------------- */
+   
+#func SetProcessDpiAwarenessContext "SetProcessDpiAwarenessContext" int
+
+if varptr(SetProcessDpiAwarenessContext) {
+	SetProcessDpiAwarenessContext -4
+}
 
 /* ---------------------------------------------------------
 	Define Constance
