@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-	FloatPort ver. 1.3.0
+	FloatPort ver. 1.3.1
 	Floating Browser for Windows
 
 	2025-2026 ABATBeliever. All rights reserved.
@@ -184,7 +184,7 @@ if strsize!=-1 {
 				if length(buf)!=3               : dialog "更新確認に失敗しました。(無効な応答)\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x21" : break
 				if buf(0)      != "[FloatPort]" : dialog "更新確認に失敗しました。(無効な応答)\n更新確認はできませんが、ソフトは使用可能です。",1,"Error 0x22" : break
 				strrep buf(2),"<br>","\n"
-				if int(buf(1)) != ApplicationVersion   : dialog "新しいバージョンが公開されました！\n"+buf(2),0,"更新のお知らせ" : IsLatest=0 : break
+				if buf(1) != ApplicationVersion   : dialog "新しいバージョンが公開されました！\n"+buf(2),0,"更新のお知らせ" : IsLatest=0 : break
 				break
 			}
 			if res < 0 {
